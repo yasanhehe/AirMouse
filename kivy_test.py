@@ -224,6 +224,7 @@ class MyApp(App):
                 self.mouse_running = True
 
         def stop_button_pressed(button):
+            print('stop_button_pressed')
             if self.mouse_running:
                 mouse.stop_mouse()
 
