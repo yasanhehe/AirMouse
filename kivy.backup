@@ -18,8 +18,8 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
-class Mouse:
-    def __init__(self, mousepad_size, mouse_se, gestures_se, scroll_se, click_interval):
+class Mouse():
+    def __init__(self):
         self.fingers = {
             'thumb': {
                 'x': 0.0, 'y': 0.0
@@ -36,16 +36,9 @@ class Mouse:
             }
         self.prev_fingers = self.fingers.copy()
         self.gestures = {'scroll': False, 'click': False}
-
         self.stop_flag = False
-        self.click_interval = False
-        self.mousepad_size = mousepad_size
-        self.mouse_se = mouse_se
-        self.gestures_se = gestures_se
-        self.scroll_se = scroll_se
-        self.click_interval = click_interval
 
-    def get_hand_landmarks(self, results):
+    def get_hand_landmarks(results):
         if results.multi_handedness is None:
             return None
         multi_hand_landmarks = results.multi_hand_landmarks
@@ -63,16 +56,16 @@ class Mouse:
         hand_landmarks = multi_hand_landmarks[hands_index]
         return hand_landmarks
 
-    def th_check(self, value, min_th, max_th):
+    def th_check(value, min_th, max_th):
         if value < min_th:
             return -1
         if value > max_th:
             return 1
         return 0
 
-    def landmark_to_location(self, landmark, width, height, min_th, max_th):
-        x_out_of_range = self.th_check(landmark.x, min_th, max_th)
-        y_out_of_range = self.th_check(landmark.y, min_th, max_th)
+    def landmark_to_location(landmark, width, height, min_th, max_th):
+        x_out_of_range = th_check(landmark.x, min_th, max_th)
+        y_out_of_range = th_check(landmark.y, min_th, max_th)
         if x_out_of_range == 1:
             landmark.x = 1
         elif x_out_of_range == -1:
@@ -87,13 +80,13 @@ class Mouse:
         location = {'x': aligned_x, 'y': aligned_y, 'z': landmark.z}
         return location
 
-    def landmark_to_distance(self, landmark_a, landmark_b):
+    def landmark_to_distance(landmark_a, landmark_b):
         distance_x = (landmark_a.x - landmark_b.x) ** 2
         distance_y = (landmark_a.y - landmark_b.y) ** 2
         distance = math.sqrt(distance_x + distance_y)
         return distance
 
-    def move_mouse(self, location, interval):
+    def move_mouse(location, interval):
         if not location is None:
             try:
                 pag.moveTo(location['x'], location['y'], duration=interval)
@@ -122,20 +115,23 @@ class Mouse:
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 if results.multi_hand_landmarks:
-                    hand_landmarks = self.get_hand_landmarks(results)
+                    hand_landmarks = get_hand_landmarks(results)
                     if hand_landmarks:
-                        for i, k in zip(range(4, 17, 4), self.fingers):
+                        for i, k in zip(range(4, 17, 4), self.self.fingers):
                             self.fingers[k] = hand_landmarks.landmark[i]
 
                         width, height = pag.size()
 
-                        thumb_middle_distance = self.landmark_to_distance(self.fingers['thumb'], self.fingers['middle'])
-                        index_middle_distance = self.landmark_to_distance(self.fingers['index'], self.fingers['middle'])
-                        thumb_ring_distance = self.landmark_to_distance(self.fingers['thumb'], self.fingers['ring'])
+                        thumb_middle_distance = landmark_to_distance(self.fingers['thumb'], self.fingers['middle'])
+                        index_middle_distance = landmark_to_distance(self.fingers['index'], self.fingers['middle'])
+                        thumb_ring_distance = landmark_to_distance(self.fingers['thumb'], self.fingers['ring'])
 
-                        if thumb_middle_distance < 0.09 and not self.click_interval:
+                        # must setup arguments!
+                        click_sensitivity = 0
+                        mousepad_size = 0
+
+                        if thumb_middle_distance < 0.04 and not click_interval:
                             pag.click()
-                            print('clicked')
                         elif index_middle_distance < 0.07 and thumb_ring_distance < 0.07:
                             if self.gestures['scroll']:
                                 scroll_range = self.prev_fingers['index'].y - self.fingers['index'].y
@@ -147,10 +143,9 @@ class Mouse:
                         else:
                             for k in self.gestures:
                                 self.gestures[k] = False
-                            location = self.landmark_to_location(self.fingers['index'], width, height, 0.1, 0.9)
-                            self.move_mouse(location, 0)
+                            location = landmark_to_location(self.fingers['index'], width, height, 0.1, 0.9)
+                            move_mouse(location, 0)
                             self.prev_fingers = self.fingers.copy()
-                            print(location)
                 if self.stop_flag:
                     break
         cap.release()
@@ -159,39 +154,22 @@ class MyApp(App):
     def build(self):
         self.title = 'AirMouse'
         self.mouse_running = False
-        defaults = {
-                'mousepad_size': 50,
-                'mouse_se': 50,
-                'gestures_se': 50,
-                'scroll_se': 50,
-                'click_interval': 50
-                }
-        mouse = Mouse(*defaults.values())
         layout = BoxLayout(orientation='vertical')
 
-        mousepad_size_slider = Slider(min=0, max=100, value=defaults['mousepad_size'])
+        mousepad_size_slider = Slider(min=0, max=100, value=50)
         mousepad_size_label = Label(text='Mousepad size', size_hint=(1, 0.8), font_size=40)
         mousepad_size_value_label = Label(text=str(int(mousepad_size_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        mouse_se_slider = Slider(min=0, max=100, value=defaults['mouse_se'])
+        mouse_se_slider = Slider(min=0, max=100, value=50)
         mouse_se_label = Label(text="Mouse sensitivity", size_hint=(1, 0.8), font_size=40)
         mouse_se_value_label = Label(text=str(int(mouse_se_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        gestures_se_slider = Slider(min=0, max=100, value=defaults['gestures_se'])
+        gestures_se_slider = Slider(min=0, max=100, value=50)
         gestures_se_label = Label(text="Gestures sensitivity", size_hint=(1, 0.8), font_size=40)
         gestures_se_value_label = Label(text=str(int(mouse_se_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        scroll_se_slider = Slider(min=0, max=100, value=defaults['scroll_se'])
-        scroll_se_label = Label(text="Scroll sensitivity", size_hint=(1, 0.8), font_size=40)
-        scroll_se_value_label = Label(text=str(int(scroll_se_slider.value)), size_hint=(1, 0.8), font_size=40)
-
-        click_interval_slider = Slider(min=0, max=100, value=defaults['click_interval'])
-        click_interval_label = Label(text="Scroll sensitivity", size_hint=(1, 0.8), font_size=40)
-        click_interval_value_label = Label(text=str(int(click_interval_slider.value)), size_hint=(1, 0.8), font_size=40)
-
         start_button = Button(text='Start', font_size=40)
         stop_button = Button(text='Stop', font_size=40)
-        apply_button = Button(text='Apply settings', font_size=40)
 
         layout.add_widget(mousepad_size_label)
         layout.add_widget(mousepad_size_value_label)
@@ -202,44 +180,26 @@ class MyApp(App):
         layout.add_widget(gestures_se_label)
         layout.add_widget(gestures_se_value_label)
         layout.add_widget(gestures_se_slider)
-        layout.add_widget(scroll_se_label)
-        layout.add_widget(scroll_se_value_label)
-        layout.add_widget(scroll_se_slider)
-        layout.add_widget(click_interval_label)
-        layout.add_widget(click_interval_value_label)
-        layout.add_widget(click_interval_slider)
         layout.add_widget(start_button)
         layout.add_widget(stop_button)
-        layout.add_widget(apply_button)
 
         mousepad_size_slider.bind(value=lambda instance, value: on_value_change(instance, value, mousepad_size_value_label))
         mouse_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, mouse_se_value_label))
         gestures_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, gestures_se_value_label))
-        scroll_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, scroll_se_value_label))
-        click_interval_slider.bind(value=lambda instance, value: on_value_change(instance, value, click_interval_value_label))
 
         def start_button_pressed(button):
             if not self.mouse_running:
+                mouse = Mouse()
                 mouse.air_mouse()
-                self.mouse_running = True
 
         def stop_button_pressed(button):
             if self.mouse_running:
                 mouse.stop_mouse()
 
-        def apply_button_pressed(button):
-            mouse.mousepad_size = float(mousepad_size_slider.value)
-            mouse.mouse_se = float(mouse_se_slider.value)
-            mouse.gestures_se = float(gestures_se_slider.value)
-            mouse.scroll_se = float(scroll_se_slider.value)
-            mouse.click_interval = float(mousepad_size_slider.value)
-
         def on_value_change(instance, value, label):
             label.text = str(int(value))
 
         start_button.bind(on_press=start_button_pressed)
-        stop_button.bind(on_press=stop_button_pressed)
-        apply_button.bind(on_press=apply_button_pressed)
 
         return layout
 
