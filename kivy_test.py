@@ -38,12 +38,12 @@ class Mouse:
         self.gestures = {'scroll': False, 'click': False}
 
         self.stop_flag = False
-        self.click_interval = False
         self.mousepad_size = mousepad_size
         self.mouse_se = mouse_se
         self.gestures_se = gestures_se
         self.scroll_se = scroll_se
         self.click_interval = click_interval
+        self.click_interval_cnt = click_interval
 
     def get_hand_landmarks(self, results):
         if results.multi_handedness is None:
@@ -133,9 +133,13 @@ class Mouse:
                         index_middle_distance = self.landmark_to_distance(self.fingers['index'], self.fingers['middle'])
                         thumb_ring_distance = self.landmark_to_distance(self.fingers['thumb'], self.fingers['ring'])
 
-                        if thumb_middle_distance < 0.09 and not self.click_interval:
-                            pag.click()
-                            print('clicked')
+                        if thumb_middle_distance < 0.09:
+                            if self.click_interval == self.click_interval_cnt:
+                                pag.click()
+                                print('clicked')
+                                self.click_interval_cnt = 0
+                            else:
+                                self.click_interval_cnt += 1
                         elif index_middle_distance < 0.07 and thumb_ring_distance < 0.07:
                             if self.gestures['scroll']:
                                 scroll_range = self.prev_fingers['index'].y - self.fingers['index'].y
