@@ -1,8 +1,8 @@
 import cv2
-import time
 import pyautogui as pag
 import mediapipe as mp
 import math
+import asyncio
 import kivy
 kivy.require('1.11.1') # 使用するKivyのバージョンを指定
 from kivy.app import App
@@ -19,7 +19,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 class Mouse:
-    def __init__(self, mousepad_size, mouse_se, gestures_se, scroll_se, click_interval):
+    def __init__(self, mousepad_size, gestures_se, scroll_se, click_interval):
         self.fingers = {
             'thumb': {
                 'x': 0.0, 'y': 0.0
@@ -39,7 +39,6 @@ class Mouse:
 
         self.stop_flag = False
         self.mousepad_size = mousepad_size
-        self.mouse_se = mouse_se
         self.gestures_se = gestures_se
         self.scroll_se = scroll_se
         self.click_interval = click_interval
@@ -164,34 +163,33 @@ class MyApp(App):
         self.title = 'AirMouse'
         self.mouse_running = False
         defaults = {
-                'mousepad_size': 50,
-                'mouse_se': 50,
-                'gestures_se': 50,
-                'scroll_se': 50,
-                'click_interval': 50
+                'mousepad_size': 0.8,
+                'gestures_se': 0.5,
+                'scroll_se': 0.5,
+                'click_interval': 3
                 }
         mouse = Mouse(*defaults.values())
         layout = BoxLayout(orientation='vertical')
 
-        mousepad_size_slider = Slider(min=0, max=100, value=defaults['mousepad_size'])
+        mousepad_size_slider = Slider(min=0, max=1, value=defaults['mousepad_size'], step = 0.1)
         mousepad_size_label = Label(text='Mousepad size', size_hint=(1, 0.8), font_size=40)
-        mousepad_size_value_label = Label(text=str(int(mousepad_size_slider.value)), size_hint=(1, 0.8), font_size=40)
+        mousepad_size_value_label = Label(text=str(float(mousepad_size_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        mouse_se_slider = Slider(min=0, max=100, value=defaults['mouse_se'])
-        mouse_se_label = Label(text="Mouse sensitivity", size_hint=(1, 0.8), font_size=40)
-        mouse_se_value_label = Label(text=str(int(mouse_se_slider.value)), size_hint=(1, 0.8), font_size=40)
+        #mouse_se_slider = Slider(min=0, max=1, value=defaults['mouse_se'], step=0.1)
+        #mouse_se_label = Label(text="Mouse sensitivity", size_hint=(1, 0.8), font_size=40)
+        #mouse_se_value_label = Label(text=str(float(mouse_se_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        gestures_se_slider = Slider(min=0, max=100, value=defaults['gestures_se'])
+        gestures_se_slider = Slider(min=0, max=1, value=defaults['gestures_se'], step=0.1)
         gestures_se_label = Label(text="Gestures sensitivity", size_hint=(1, 0.8), font_size=40)
-        gestures_se_value_label = Label(text=str(int(mouse_se_slider.value)), size_hint=(1, 0.8), font_size=40)
+        gestures_se_value_label = Label(text=str(float(gestures_se_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        scroll_se_slider = Slider(min=0, max=100, value=defaults['scroll_se'])
+        scroll_se_slider = Slider(min=0, max=1, value=defaults['scroll_se'], step=0.1)
         scroll_se_label = Label(text="Scroll sensitivity", size_hint=(1, 0.8), font_size=40)
-        scroll_se_value_label = Label(text=str(int(scroll_se_slider.value)), size_hint=(1, 0.8), font_size=40)
+        scroll_se_value_label = Label(text=str(float(scroll_se_slider.value)), size_hint=(1, 0.8), font_size=40)
 
-        click_interval_slider = Slider(min=0, max=100, value=defaults['click_interval'])
-        click_interval_label = Label(text="Scroll sensitivity", size_hint=(1, 0.8), font_size=40)
-        click_interval_value_label = Label(text=str(int(click_interval_slider.value)), size_hint=(1, 0.8), font_size=40)
+        click_interval_slider = Slider(min=0, max=10, value=defaults['click_interval'], step=1)
+        click_interval_label = Label(text="Click interval", size_hint=(1, 0.8), font_size=40)
+        click_interval_value_label = Label(text=str(float(click_interval_slider.value)), size_hint=(1, 0.8), font_size=40)
 
         start_button = Button(text='Start', font_size=40)
         stop_button = Button(text='Stop', font_size=40)
@@ -200,9 +198,9 @@ class MyApp(App):
         layout.add_widget(mousepad_size_label)
         layout.add_widget(mousepad_size_value_label)
         layout.add_widget(mousepad_size_slider)
-        layout.add_widget(mouse_se_label)
-        layout.add_widget(mouse_se_value_label)
-        layout.add_widget(mouse_se_slider)
+        #layout.add_widget(mouse_se_label)
+        #layout.add_widget(mouse_se_value_label)
+        #layout.add_widget(mouse_se_slider)
         layout.add_widget(gestures_se_label)
         layout.add_widget(gestures_se_value_label)
         layout.add_widget(gestures_se_slider)
@@ -217,7 +215,7 @@ class MyApp(App):
         layout.add_widget(apply_button)
 
         mousepad_size_slider.bind(value=lambda instance, value: on_value_change(instance, value, mousepad_size_value_label))
-        mouse_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, mouse_se_value_label))
+        #mouse_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, mouse_se_value_label))
         gestures_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, gestures_se_value_label))
         scroll_se_slider.bind(value=lambda instance, value: on_value_change(instance, value, scroll_se_value_label))
         click_interval_slider.bind(value=lambda instance, value: on_value_change(instance, value, click_interval_value_label))
@@ -232,15 +230,16 @@ class MyApp(App):
             if self.mouse_running:
                 mouse.stop_mouse()
 
+        # must calculate
         def apply_button_pressed(button):
-            mouse.mousepad_size = float(mousepad_size_slider.value)
-            mouse.mouse_se = float(mouse_se_slider.value)
+            mouse.mousepad_size = (1.0 - round(float(mousepad_size_slider.value)), 1) / 2.0
             mouse.gestures_se = float(gestures_se_slider.value)
             mouse.scroll_se = float(scroll_se_slider.value)
             mouse.click_interval = float(mousepad_size_slider.value)
 
         def on_value_change(instance, value, label):
-            label.text = str(int(value))
+            print(value)
+            label.text = str(round(float(value), 1))
 
         start_button.bind(on_press=start_button_pressed)
         stop_button.bind(on_press=stop_button_pressed)
