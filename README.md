@@ -6,8 +6,11 @@ Use your hand as a mouse with Mediapipe Hands.
 ## Installation
 
 1. Install mediapipe.
+
 The installation method depends on the processor type.
 If you're using Apple-sillicon, the following may help.
+https://github.com/cansik/mediapipe-silicon
+
 2. Clone, install libs and 
 ``` bash
 git clone https://github.com/kAwA1290/AirMouse.git
