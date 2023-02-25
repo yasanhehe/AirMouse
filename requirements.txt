@@ -1,0 +1,4 @@
+kivy
+cv2
+pyautogui
+threading
