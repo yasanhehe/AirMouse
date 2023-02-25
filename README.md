@@ -10,7 +10,7 @@ The installation method depends on the processor type.
 If you're using Apple-sillicon, the following may help.  
 https://github.com/cansik/mediapipe-silicon
 
-2. Clone, install libs and 
+2. Clone and install libs. 
 ``` bash
 git clone https://github.com/kAwA1290/AirMouse.git
 cd ./AirMouse
