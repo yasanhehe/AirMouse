@@ -38,11 +38,15 @@ class Mouse:
         self.gestures = {'scroll': False, 'click': False}
 
         self.stop_flag = False
-        self.mousepad_size = mousepad_size
+
+        blank = (1.0 - mousepad_size) / 2.0
+        self.mousepad_min = blank
+        self.mousepad_max = 1.0 - blank
         self.gestures_se = gestures_se
         self.scroll_se = scroll_se
         self.click_interval = click_interval
         self.click_interval_cnt = click_interval
+        self.width, self.height = pag.size()
 
     def get_hand_landmarks(self, results):
         if results.multi_handedness is None:
@@ -62,27 +66,27 @@ class Mouse:
         hand_landmarks = multi_hand_landmarks[hands_index]
         return hand_landmarks
 
-    def th_check(self, value, min_th, max_th):
-        if value < min_th:
+    def th_check(self, value):
+        if value < self.mousepad_min:
             return -1
-        if value > max_th:
+        if value > self.mousepad_max:
             return 1
         return 0
 
-    def landmark_to_location(self, landmark, width, height, min_th, max_th):
-        x_out_of_range = self.th_check(landmark.x, min_th, max_th)
-        y_out_of_range = self.th_check(landmark.y, min_th, max_th)
+    def landmark_to_location(self, finger):
+        x_out_of_range = self.th_check(self.fingers[finger].x)
+        y_out_of_range = self.th_check(self.fingers[finger].y)
         if x_out_of_range == 1:
-            landmark.x = 1
+            self.fingers[finger].x = 1
         elif x_out_of_range == -1:
-            landmark.x = 0
+            self.fingers[finger].x = 0
         if y_out_of_range == 1:
             landmark.y = 1
         elif y_out_of_range == -1:
             landmark.y = 0
         # flip and align to window size
-        aligned_x = width - ((landmark.x - min_th) * (1 / (max_th - min_th))) * width
-        aligned_y = ((landmark.y - min_th) * (1 / (max_th - min_th))) * height
+        aligned_x = self.width - ((landmark.x - self.mousepad_min) * (1 / (self.mousepad_max - self.mousepad_min))) * self.width
+        aligned_y = ((landmark.y - self.mousepad_min) * (1 / (self.mousepad_max - self.mousepad_min))) * self.height
         location = {'x': aligned_x, 'y': aligned_y, 'z': landmark.z}
         return location
 
@@ -150,7 +154,7 @@ class Mouse:
                         else:
                             for k in self.gestures:
                                 self.gestures[k] = False
-                            location = self.landmark_to_location(self.fingers['index'], width, height, 0.1, 0.9)
+                            location = self.landmark_to_location('index')
                             self.move_mouse(location, 0)
                             self.prev_fingers = self.fingers.copy()
                             print(location)
@@ -232,7 +236,9 @@ class MyApp(App):
 
         # must calculate
         def apply_button_pressed(button):
-            mouse.mousepad_size = (1.0 - round(float(mousepad_size_slider.value)), 1) / 2.0
+            blank = (1.0 - float(mousepad_size_slider.value)) / 2.0
+            mouse.mousepad_min = blank
+            mouse.mousepad_max = 1.0 - blank
             mouse.gestures_se = float(gestures_se_slider.value)
             mouse.scroll_se = float(scroll_se_slider.value)
             mouse.click_interval = float(mousepad_size_slider.value)
