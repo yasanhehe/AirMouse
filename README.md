@@ -2,7 +2,7 @@
 # AirMouse
 
 Use your hand as a mouse with Mediapipe Hands.
-https://user-images.githubusercontent.com/90031082/221593216-a7144b41-1cfc-4a4a-b73d-cc52f358ef4b.gif
+![demo](https://user-images.githubusercontent.com/90031082/221593216-a7144b41-1cfc-4a4a-b73d-cc52f358ef4b.gif)
 
 ## Installation
 
