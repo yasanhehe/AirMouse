@@ -21,3 +21,6 @@ pip install -r requirements.txt
 ``` bash
 python myapp.py
 ```
+
+
+I am not responsible for any damages caused by using this application.
